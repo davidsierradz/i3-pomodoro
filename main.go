@@ -14,8 +14,8 @@ import (
 const (
 	stateFile = "/tmp/pomodoro-state"
 
-	iconRun   = "➤"
-	iconPause = "Ⅱ"
+	iconRun   = ""
+	iconPause = ""
 
 	defaultTimerLength      = 25 * time.Minute
 	defaultShortBreakLength = 5 * time.Minute
@@ -35,6 +35,21 @@ type State struct {
 	LastTime  time.Time
 	Now       time.Time
 	ClockType int
+}
+
+func (s *State) clockTextShort() string {
+	clockText := "P1"
+
+	switch s.ClockType {
+	case clockPomodoro2:
+		clockText = "P2"
+	case clockShortBreak:
+		clockText = "SB"
+	case clockLongBreak:
+		clockText = "LB"
+	}
+
+	return clockText
 }
 
 func (s *State) clockText() string {
@@ -76,7 +91,7 @@ func (s *State) output() {
 		icon = iconRun
 	}
 
-	pomodoro := fmt.Sprintf("%s: %s %s", s.clockText(), icon, s.Duration.Round(time.Second))
+	pomodoro := fmt.Sprintf(" %s %s %s", s.clockTextShort(), icon, s.Duration.Round(time.Second))
 	fmt.Println(pomodoro)
 	fmt.Println(pomodoro)
 }
