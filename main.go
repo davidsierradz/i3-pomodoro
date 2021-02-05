@@ -21,10 +21,14 @@ const (
 	defaultShortBreakLength = 5 * time.Minute
 	defaultLongBreakLength  = 15 * time.Minute
 
-	clockPomodoro   = 0
-	clockPomodoro2  = iota
-	clockShortBreak = iota
-	clockLongBreak  = iota
+	clockPomodoro    = 0
+	clockPomodoro2   = iota
+	clockPomodoro3   = iota
+	clockPomodoro4   = iota
+	clockShortBreak  = iota
+	clockShortBreak2 = iota
+	clockShortBreak3 = iota
+	clockLongBreak   = iota
 )
 
 // State is the state of the pomodoro timer.
@@ -43,8 +47,16 @@ func (s *State) clockTextShort() string {
 	switch s.ClockType {
 	case clockPomodoro2:
 		clockText = "P2"
+	case clockPomodoro3:
+		clockText = "P3"
+	case clockPomodoro4:
+		clockText = "P4"
 	case clockShortBreak:
 		clockText = "SB"
+	case clockShortBreak2:
+		clockText = "SB2"
+	case clockShortBreak3:
+		clockText = "SB3"
 	case clockLongBreak:
 		clockText = "LB"
 	}
@@ -58,8 +70,16 @@ func (s *State) clockText() string {
 	switch s.ClockType {
 	case clockPomodoro2:
 		clockText = "POMODORO 2"
+	case clockPomodoro3:
+		clockText = "POMODORO 3"
+	case clockPomodoro4:
+		clockText = "POMODORO 4"
 	case clockShortBreak:
 		clockText = "SHORT BREAK"
+	case clockShortBreak2:
+		clockText = "SHORT BREAK 2"
+	case clockShortBreak3:
+		clockText = "SHORT BREAK 3"
 	case clockLongBreak:
 		clockText = "LONG BREAK"
 	}
@@ -72,9 +92,17 @@ func (s *State) cycleClock() {
 	case clockPomodoro:
 		s.ClockType = clockShortBreak
 	case clockPomodoro2:
+		s.ClockType = clockShortBreak2
+	case clockPomodoro3:
+		s.ClockType = clockShortBreak3
+	case clockPomodoro4:
 		s.ClockType = clockLongBreak
 	case clockShortBreak:
 		s.ClockType = clockPomodoro2
+	case clockShortBreak2:
+		s.ClockType = clockPomodoro3
+	case clockShortBreak3:
+		s.ClockType = clockPomodoro4
 	case clockLongBreak:
 		s.ClockType = clockPomodoro
 	}
@@ -82,7 +110,29 @@ func (s *State) cycleClock() {
 
 func (s *State) finish() {
 	s.cycleClock()
-	exec.Command("i3-nagbar", "-m", fmt.Sprintf("%s!", s.clockText())).Start()
+
+	soundText := ""
+	switch s.ClockType {
+	case clockShortBreak:
+		soundText = "/home/neuromante/.local/share/sounds/chinese-gong-daniel_simon_2.wav"
+	case clockShortBreak2:
+		soundText = "/home/neuromante/.local/share/sounds/chinese-gong-daniel_simon_2.wav"
+	case clockShortBreak3:
+		soundText = "/home/neuromante/.local/share/sounds/chinese-gong-daniel_simon_2.wav"
+	case clockPomodoro:
+		soundText = "/home/neuromante/.local/share/sounds/476871_8152631-lq-2.ogg"
+	case clockPomodoro2:
+		soundText = "/home/neuromante/.local/share/sounds/411089_5121236-lq-2.ogg"
+	case clockPomodoro3:
+		soundText = "/home/neuromante/.local/share/sounds/411089_5121236-lq-2.ogg"
+	case clockPomodoro4:
+		soundText = "/home/neuromante/.local/share/sounds/411089_5121236-lq-2.ogg"
+	case clockLongBreak:
+		soundText = "/home/neuromante/.local/share/sounds/chinese-gong-daniel_simon_2.wav"
+	}
+
+	exec.Command("dunstify", "--appname", "Pomodoro", "--urgency", "2", fmt.Sprintf("%s!", s.clockText())).Start()
+	exec.Command("mpv", "--no-terminal", "--no-video", soundText).Start()
 }
 
 func (s *State) output() {
@@ -91,7 +141,7 @@ func (s *State) output() {
 		icon = iconRun
 	}
 
-	pomodoro := fmt.Sprintf(" %s %s %s", s.clockTextShort(), icon, s.Duration.Round(time.Second))
+	pomodoro := fmt.Sprintf("%s %s %s", s.clockTextShort(), icon, s.Duration.Round(time.Second))
 	fmt.Println(pomodoro)
 	fmt.Println(pomodoro)
 }
@@ -102,7 +152,11 @@ func (s *State) write() error {
 		return errors.Wrap(err, "while marshaling json")
 	}
 
-	return ioutil.WriteFile(stateFile, content, 0600)
+	err = ioutil.WriteFile(stateFile, content, 0600)
+	if err != nil {
+		return errors.Wrap(err, "while writing state file")
+	}
+	return nil
 }
 
 func loadState() (*State, error) {
@@ -127,11 +181,11 @@ func (s *State) reset() {
 	s.LastTime = s.Now
 
 	switch s.ClockType {
-	case clockPomodoro, clockPomodoro2:
+	case clockPomodoro, clockPomodoro2, clockPomodoro3, clockPomodoro4:
 		s.Duration = defaultTimerLength
 	case clockLongBreak:
 		s.Duration = defaultLongBreakLength
-	case clockShortBreak:
+	case clockShortBreak, clockShortBreak2, clockShortBreak3:
 		s.Duration = defaultShortBreakLength
 	}
 
